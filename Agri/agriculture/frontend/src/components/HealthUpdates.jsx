@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { API_BASE_URL } from '../api';
 
 export default function HealthUpdates() {
   const { t } = useLanguage();
   const [updates, setUpdates] = useState([]);
-  const [loading] = useState(false);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -14,6 +16,34 @@ export default function HealthUpdates() {
     disease_details: '',
     reported_by: ''
   });
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${API_BASE_URL}/fields/demo-field/alerts`)
+      .then((response) => response.ok ? response.json() : [])
+      .then((data) => {
+        if (active) setAlerts(data);
+      })
+      .catch(() => {
+        if (active) setAlerts([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false };
+  }, []);
+
+  const updateAlert = async (id, action) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/alerts/${id}/${action}`, { method: 'PATCH' });
+      if (response.ok) {
+        const updated = await response.json();
+        setAlerts((current) => current.map((alert) => alert.id === id ? updated : alert));
+      }
+    } catch (error) {
+      console.error('Error updating alert:', error);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -142,6 +172,28 @@ export default function HealthUpdates() {
         </div>
 
         <div>
+          {alerts.length > 0 && (
+            <div style={{ marginBottom: '2rem' }}>
+              <h2>Field alerts</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {alerts.map((alert) => (
+                  <div key={alert.id} className="glass-panel" style={{ padding: '1rem', borderLeft: `4px solid ${alert.severity === 'critical' ? '#ef4444' : '#f59e0b'}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <strong>{alert.severity.toUpperCase()} · {alert.riskType}</strong>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{alert.status}</span>
+                    </div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.5rem 0 0.75rem' }}>{alert.message}</p>
+                    {alert.status !== 'resolved' && (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {alert.status === 'open' && <button type="button" className="btn btn-outline" onClick={() => updateAlert(alert.id, 'acknowledge')}>Acknowledge</button>}
+                        <button type="button" className="btn btn-primary" onClick={() => updateAlert(alert.id, 'resolve')}>Resolve</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <h2>{t('health.recent')}</h2>
           {loading ? (
             <p>{t('health.loading')}</p>

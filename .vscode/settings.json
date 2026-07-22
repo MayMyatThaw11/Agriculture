@@ -1,0 +1,15 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/backcode/.venv/Scripts/python.exe",
+  "python.analysis.extraPaths": ["${workspaceFolder}/backcode"],
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["backcode/tests"],
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "ruff.configuration": "${workspaceFolder}/backcode/pyproject.toml"
+}

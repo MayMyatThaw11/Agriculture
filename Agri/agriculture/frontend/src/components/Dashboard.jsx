@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from 'react'
 import { BarChart3, CloudRain, Leaf, MapPinned, Sprout, TrendingUp } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
+import { API_BASE_URL } from '../api.js'
 
 const overviewCards = [
 	{
@@ -48,6 +50,49 @@ const yieldByCrop = [
 
 function Dashboard() {
 	const { t } = useLanguage()
+	const [stats, setStats] = useState(null)
+	const [growth, setGrowth] = useState([])
+	const [growthScenario, setGrowthScenario] = useState('healthy')
+
+	useEffect(() => {
+		let active = true
+		Promise.all([
+			fetch(`${API_BASE_URL}/dashboard/stats`).then((response) => response.ok ? response.json() : null),
+			fetch(`${API_BASE_URL}/fields/demo-field/growth/timeline`).then((response) => response.ok ? response.json() : []),
+		]).then(([nextStats, nextGrowth]) => {
+			if (!active) return
+			setStats(nextStats)
+			setGrowth(nextGrowth || [])
+		}).catch(() => {
+			if (!active) return
+			setStats(null)
+			setGrowth([])
+		})
+		return () => { active = false }
+	}, [])
+
+	const overviewCards = useMemo(() => [
+		{ key: 'dash.townships', value: stats ? String(stats.totalFields ?? stats.overview?.townships ?? 0) : '112', icon: MapPinned, accent: 'text-emerald-700', bg: 'bg-emerald-100' },
+		{ key: 'dash.records', value: stats ? String(stats.totalAssessments ?? stats.overview?.records ?? 0) : '24,860', icon: BarChart3, accent: 'text-sky-700', bg: 'bg-sky-100' },
+		{ key: 'dash.yield', value: stats?.overview?.yield && stats.overview.yield !== 'demo' ? `${stats.overview.yield} t/ha` : 'Demo rules', icon: Sprout, accent: 'text-amber-700', bg: 'bg-amber-100' },
+		{ key: 'dash.rainfall', value: stats?.overview?.rainfall && stats.overview.rainfall !== 'seeded' ? `${stats.overview.rainfall} mm` : 'Seeded', icon: CloudRain, accent: 'text-indigo-700', bg: 'bg-indigo-100' },
+	], [stats])
+	const fieldStatus = stats?.fieldStatuses?.[0]
+	const cropItems = stats?.cropDistribution?.length ? stats.cropDistribution : cropDistribution
+	const yieldItems = stats?.yieldByCrop?.length ? stats.yieldByCrop : yieldByCrop
+
+	const startGrowth = async () => {
+		try {
+			const response = await fetch(`${API_BASE_URL}/fields/demo-field/growth/start`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ scenario: growthScenario }),
+			})
+			if (response.ok) setGrowth(await response.json())
+		} catch {
+			// Keep the last replay visible when the optional API is unavailable.
+		}
+	}
 
 	return (
 		<div className="space-y-6">
@@ -68,6 +113,45 @@ function Dashboard() {
 						Last 30 days trend
 					</div>
 				</div>
+			</section>
+
+			<section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+				<article className="rounded-[1.8rem] border border-white/80 bg-white/90 p-6 shadow-[0_16px_50px_rgba(12,46,61,0.08)] backdrop-blur-xl">
+					<div className="flex items-start justify-between gap-4">
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-medium">Live assessment</p>
+							<h3 className="mt-2 text-xl font-semibold text-myanglow-navy">{fieldStatus?.fieldName || 'Demo field'}</h3>
+						</div>
+						<span className={`rounded-full px-3 py-1 text-xs font-semibold ${fieldStatus?.status === 'critical' ? 'bg-red-100 text-red-700' : fieldStatus?.status === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+							{fieldStatus?.status || 'healthy'}
+						</span>
+					</div>
+					<p className="mt-4 text-sm leading-6 text-slate-600">{fieldStatus?.recommendation || 'Assessment recommendation will appear when the backend is available.'}</p>
+					{fieldStatus?.healthScore != null ? <p className="mt-4 text-sm font-semibold text-myanglow-forest">Health score: {fieldStatus.healthScore}/100</p> : null}
+				</article>
+
+				<article className="rounded-[1.8rem] border border-white/80 bg-white/90 p-6 shadow-[0_16px_50px_rgba(12,46,61,0.08)] backdrop-blur-xl">
+					<div className="flex flex-wrap items-center justify-between gap-3">
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-medium">Growth comparison</p>
+							<h3 className="mt-2 text-xl font-semibold text-myanglow-navy">Illustrative 12-month replay</h3>
+						</div>
+						<div className="flex gap-2">
+							<select value={growthScenario} onChange={(event) => setGrowthScenario(event.target.value)} className="rounded-xl border border-myanglow-sage bg-white px-3 py-2 text-sm">
+								<option value="healthy">Healthy</option>
+								<option value="dry-soil">Dry soil</option>
+								<option value="heat-stress">Heat stress</option>
+							</select>
+							<button type="button" onClick={startGrowth} className="rounded-xl bg-myanglow-forest px-3 py-2 text-sm font-semibold text-white">Replay</button>
+						</div>
+					</div>
+					<div className="mt-4 grid gap-3 sm:grid-cols-2">
+						{growth.map((simulation) => {
+							const lastEvent = simulation.events?.[simulation.events.length - 1]
+							return <div key={simulation.id} className="rounded-xl border border-myanglow-sage/60 bg-myanglow-sage/20 p-3"><p className="text-sm font-semibold text-myanglow-navy">{simulation.scenarioType.replace('_', ' ')}</p><p className="mt-1 text-xs text-slate-500">{simulation.isIllustrative ? 'Illustrative' : 'Measured'} · {lastEvent?.growthStage || 'Preparing'}</p><p className="mt-2 text-lg font-semibold text-myanglow-forest">{lastEvent?.healthIndex ?? '—'}/100</p></div>
+						})}
+					</div>
+				</article>
 			</section>
 
 			<section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -98,7 +182,7 @@ function Dashboard() {
 					</div>
 
 					<div className="space-y-4">
-						{cropDistribution.map((item) => (
+						{cropItems.map((item) => (
 							<div key={item.crop} className="space-y-1">
 								<div className="flex items-center justify-between text-sm">
 									<span className="font-medium text-slate-700">{item.crop}</span>
@@ -122,7 +206,7 @@ function Dashboard() {
 					</div>
 
 					<div className="space-y-3">
-						{yieldByCrop.map((item) => (
+						{yieldItems.map((item) => (
 							<div
 								key={item.crop}
 								className="flex items-center justify-between rounded-xl border border-myanglow-sage/50 bg-myanglow-sage/20 px-4 py-3"
