@@ -24,7 +24,7 @@ Run these commands from this `fastapi` folder:
 4. Start the API: `python -m uvicorn app.main:app --reload`
 5. Open the API documentation: `http://127.0.0.1:8000/docs`
 
-The local `.env` contains safe development defaults and is ignored by Git. Copy `.env.example` when setting up another machine. Never commit real Telegram tokens or database passwords.
+Create and maintain `.env` only on the local machine. It is ignored by Git. Never commit database connection strings, Telegram tokens, or other credentials.
 
 ## Available endpoints
 
@@ -43,7 +43,7 @@ The local `.env` contains safe development defaults and is ignored by Git. Copy 
 
 ## Database migrations
 
-The default database URL expects PostgreSQL at `localhost:5432` with database `agroguard`. Change `AGROGUARD_DATABASE_URL` in `.env` for your local environment.
+Set `AGROGUARD_DATABASE_URL` in the private local `.env`. For Supabase on an IPv4-only network, copy the Session pooler URI from the project's Dashboard **Connect** panel and keep TLS enabled with `sslmode=require`. Use the direct database endpoint only when the machine has working IPv6 connectivity or the Supabase IPv4 add-on.
 
 - Create a migration after adding models: `python -m alembic revision --autogenerate -m "describe change"`
 - Apply migrations: `python -m alembic upgrade head`
@@ -61,4 +61,3 @@ Add one vertical slice at a time in this order:
 4. Explainable field assessments.
 5. Alerts and Telegram delivery.
 6. Growth simulation and demo reset.
-
