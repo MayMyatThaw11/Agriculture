@@ -55,7 +55,7 @@ function Dashboard() {
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<p className="text-xs font-semibold uppercase tracking-[0.4em] text-myanglow-medium">
-							MyanGlow Analytics
+							MyanGrow Analytics
 						</p>
 						<h2 className="mt-3 text-3xl font-semibold text-myanglow-navy">{t('dash.title')}</h2>
 						<p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">

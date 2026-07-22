@@ -24,7 +24,7 @@ function Sidebar({ mobileSidebarOpen, onClose }) {
     >
       <div className="flex items-start justify-between border-b border-myanglow-sage/70 px-6 py-6">
         <div>
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.5em] text-myanglow-medium">MyanGlow</p>
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.5em] text-myanglow-medium">MyanGrow</p>
           <h2 className="mt-3 text-2xl font-semibold text-myanglow-navy">{t('sidebar.title')}</h2>
           <p className="mt-2 text-sm leading-6 text-slate-500">
             {t('sidebar.subtitle')}

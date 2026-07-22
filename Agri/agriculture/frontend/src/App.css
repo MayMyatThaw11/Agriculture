@@ -185,6 +185,20 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
 @keyframes resultFlip { from { opacity: 0; transform: perspective(900px) rotateY(-12deg) translateY(12px); } to { opacity: 1; transform: perspective(900px) rotateY(0) translateY(0); } }
 @keyframes popCard { from { opacity: 0; transform: scale(.82) translateY(18px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes impactReveal { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes impactFloat { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(-12px, 14px, 0) scale(1.08); } }
+
+.impact-reveal { animation: impactReveal .7s cubic-bezier(.2,.8,.2,1) both; }
+.impact-reveal-delayed { animation-delay: .12s; }
+.impact-card { animation: impactReveal .65s cubic-bezier(.2,.8,.2,1) both; transition: transform .25s ease, background-color .25s ease, border-color .25s ease; }
+.impact-card:hover { transform: translateY(-6px); border-color: rgba(189,230,61,.4); background: rgba(255,255,255,.11); }
+.impact-orb { animation: impactFloat 8s ease-in-out infinite; }
+.impact-orb-delayed { animation-delay: -4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .impact-reveal, .impact-card, .impact-orb { animation: none; }
+  .impact-card { transition: none; }
+}
 
 @media (max-width: 767px) {
   body { overflow-x: hidden; }

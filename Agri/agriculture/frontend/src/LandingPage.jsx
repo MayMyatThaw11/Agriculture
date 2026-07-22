@@ -1,17 +1,25 @@
 import {
   ArrowRight,
+  Activity,
   Bot,
   CheckCircle2,
   ChevronDown,
   Leaf,
   LineChart,
+  LockKeyhole,
+  Mail,
   Radar,
   RadioTower,
   ScanSearch,
   Sparkles,
   Sprout,
+  TimerReset,
+  TrendingUp,
+  UserRound,
+  X,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const capabilities = [
   {
@@ -47,7 +55,123 @@ const signals = [
   { label: 'Field insights', value: 'Live', icon: LineChart },
 ]
 
+const impactHighlights = [
+  {
+    icon: Activity,
+    title: 'Earlier field awareness',
+    description: 'Bring satellite, sensor, and crop-health signals together so changes are easier to notice and understand.',
+  },
+  {
+    icon: TimerReset,
+    title: 'Faster daily decisions',
+    description: 'Replace scattered checks with one clear workspace for recommendations, diagnosis, and practical next steps.',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Stronger growing plans',
+    description: 'Use regional history and live field indicators to plan crops with more context and confidence.',
+  },
+]
+
+function AuthModal({ mode, onModeChange, onClose, onSuccess }) {
+  const [message, setMessage] = useState('')
+
+  const submit = (event) => {
+    event.preventDefault()
+    if (mode === 'forgot') {
+      setMessage('Password reset instructions have been sent to your email.')
+      return
+    }
+    onSuccess()
+  }
+
+  const changeMode = (nextMode) => {
+    setMessage('')
+    onModeChange(nextMode)
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-myanglow-navy/45 p-4 backdrop-blur-md" onMouseDown={onClose}>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label="MyanGrow authentication"
+        className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/80 bg-white p-6 shadow-[0_30px_100px_rgba(12,46,61,0.3)] sm:p-8"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-myanglow-lime/20 blur-2xl" />
+        <button type="button" onClick={onClose} aria-label="Close authentication" className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-xl text-slate-500 transition hover:bg-myanglow-sage/40 hover:text-myanglow-navy">
+          <X size={19} />
+        </button>
+
+        <div className="relative">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-myanglow-forest text-white shadow-lg shadow-myanglow-forest/20">
+            <Leaf size={22} />
+          </div>
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.35em] text-myanglow-medium">MyanGrow account</p>
+          <h2 className="mt-2 text-3xl font-semibold text-myanglow-navy">
+            {mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : 'Reset your password'}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            {mode === 'signin' ? 'Sign in to continue to your farm dashboard.' : mode === 'signup' ? 'Start monitoring your fields with MyanGrow.' : 'Enter your email and we will send recovery instructions.'}
+          </p>
+
+          {mode !== 'forgot' ? (
+            <div className="mt-6 grid grid-cols-2 rounded-2xl bg-myanglow-sage/35 p-1">
+              <button type="button" onClick={() => changeMode('signin')} className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${mode === 'signin' ? 'bg-white text-myanglow-forest shadow-sm' : 'text-slate-500'}`}>Sign in</button>
+              <button type="button" onClick={() => changeMode('signup')} className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${mode === 'signup' ? 'bg-white text-myanglow-forest shadow-sm' : 'text-slate-500'}`}>Sign up</button>
+            </div>
+          ) : null}
+
+          <form onSubmit={submit} className="mt-5 space-y-4">
+            {mode === 'signup' ? (
+              <label className="block text-sm font-semibold text-myanglow-navy">
+                Full name
+                <span className="mt-2 flex items-center gap-3 rounded-2xl border border-myanglow-sage bg-white px-4 focus-within:border-myanglow-medium focus-within:ring-4 focus-within:ring-myanglow-sage/30">
+                  <UserRound size={17} className="text-myanglow-medium" />
+                  <input required type="text" autoComplete="name" placeholder="Your name" className="w-full border-0 bg-transparent py-3.5 text-sm font-normal outline-none" />
+                </span>
+              </label>
+            ) : null}
+            <label className="block text-sm font-semibold text-myanglow-navy">
+              Email address
+              <span className="mt-2 flex items-center gap-3 rounded-2xl border border-myanglow-sage bg-white px-4 focus-within:border-myanglow-medium focus-within:ring-4 focus-within:ring-myanglow-sage/30">
+                <Mail size={17} className="text-myanglow-medium" />
+                <input required type="email" autoComplete="email" placeholder="farmer@example.com" className="w-full border-0 bg-transparent py-3.5 text-sm font-normal outline-none" />
+              </span>
+            </label>
+            {mode !== 'forgot' ? (
+              <label className="block text-sm font-semibold text-myanglow-navy">
+                Password
+                <span className="mt-2 flex items-center gap-3 rounded-2xl border border-myanglow-sage bg-white px-4 focus-within:border-myanglow-medium focus-within:ring-4 focus-within:ring-myanglow-sage/30">
+                  <LockKeyhole size={17} className="text-myanglow-medium" />
+                  <input required minLength={6} type="password" autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} placeholder="At least 6 characters" className="w-full border-0 bg-transparent py-3.5 text-sm font-normal outline-none" />
+                </span>
+              </label>
+            ) : null}
+
+            {message ? <p className="rounded-xl bg-myanglow-sage/40 px-4 py-3 text-sm text-myanglow-forest">{message}</p> : null}
+            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-2xl bg-myanglow-forest px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-myanglow-forest/20 transition hover:-translate-y-0.5 hover:bg-myanglow-medium">
+              {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'} 
+            </button>
+          </form>
+
+          <div className="mt-5 text-center text-sm text-slate-500">
+            {mode === 'signin' ? <button type="button" onClick={() => changeMode('forgot')} className="font-semibold text-myanglow-forest hover:text-myanglow-medium">Forgot password?</button> : null}
+            {mode === 'forgot' ? <button type="button" onClick={() => changeMode('signin')} className="font-semibold text-myanglow-forest hover:text-myanglow-medium">Back to sign in</button> : null}
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function LandingPage() {
+  const navigate = useNavigate()
+  const [authMode, setAuthMode] = useState(null)
+
+  const openAuth = (mode = 'signin') => setAuthMode(mode)
+
   return (
     <main className="min-h-screen overflow-hidden bg-gradient-to-br from-myanglow-sage via-white to-myanglow-soft/40 text-myanglow-navy">
       <section className="relative min-h-screen">
@@ -56,27 +180,25 @@ function LandingPage() {
         <div className="absolute -left-12 top-60 h-40 w-40 rounded-full border border-myanglow-soft/30" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <nav className="flex w-full items-center justify-between py-8">
-            <div className="flex items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-myanglow-forest text-white shadow-lg shadow-myanglow-forest/20">
-                <Leaf size={22} />
+          <nav className="flex min-h-28 w-full items-center justify-between py-8 sm:py-9">
+            <div className="flex items-center gap-4">
+              <div className="grid h-14 w-14 place-items-center rounded-[1.2rem] bg-myanglow-forest text-white shadow-lg shadow-myanglow-forest/20">
+                <Leaf size={26} />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.5em] text-myanglow-medium">MyanGlow</p>
-                <p className="text-xs text-slate-500">Intelligence for every field</p>
+                <p className="text-sm font-bold uppercase tracking-[0.5em] text-myanglow-medium">MyanGrow</p>
+                <p className="mt-1 text-sm text-slate-500">Intelligence for every field</p>
               </div>
             </div>
 
-            <div className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex lg:gap-10">
+            <div className="hidden items-center gap-9 text-base font-medium text-slate-600 md:flex lg:gap-11">
               <a href="#capabilities" className="transition hover:text-myanglow-forest">Capabilities</a>
               <a href="#impact" className="transition hover:text-myanglow-forest">Impact</a>
-              <Link to="/dashboard" className="rounded-xl bg-myanglow-forest px-5 py-3 text-white shadow-lg shadow-myanglow-forest/15 transition hover:bg-myanglow-medium">
-                Open platform
-              </Link>
+              <button type="button" onClick={() => openAuth('signin')} className="rounded-2xl bg-myanglow-forest px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-myanglow-forest/15 transition hover:bg-myanglow-medium">Sign in</button>
             </div>
           </nav>
 
-          <div className="grid min-h-[calc(100vh-7rem)] items-center gap-12 py-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:py-16">
+          <div className="grid items-center gap-12 pb-14 pt-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:pb-16 lg:pt-7">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-myanglow-sage bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-myanglow-forest shadow-sm backdrop-blur">
                 <Sparkles size={14} />
@@ -94,12 +216,13 @@ function LandingPage() {
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  to="/dashboard"
+                <button
+                  type="button"
+                  onClick={() => openAuth('signup')}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-myanglow-forest px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-myanglow-forest/20 transition hover:-translate-y-0.5 hover:bg-myanglow-medium"
                 >
                   Explore the dashboard 
-                </Link>
+                </button>
                 <a
                   href="#capabilities"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-myanglow-sage bg-white/85 px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:bg-myanglow-sage/35"
@@ -172,8 +295,8 @@ function LandingPage() {
         </div>
       </section>
 
-      <section id="capabilities" className="relative bg-white/80 py-20 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section id="capabilities" className="relative flex min-h-screen scroll-mt-0 items-center bg-white/80 py-12 sm:py-14">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-medium">One connected platform</p>
             <h2 className="mt-4 text-3xl font-semibold leading-tight text-myanglow-navy sm:text-4xl">Everything needed to understand the field and act faster.</h2>
@@ -196,20 +319,62 @@ function LandingPage() {
         </div>
       </section>
 
-      <section id="impact" className="py-20 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="overflow-hidden rounded-[2rem] bg-myanglow-navy px-6 py-10 text-white shadow-[0_30px_80px_rgba(12,46,61,0.2)] sm:px-10 lg:flex lg:items-center lg:justify-between lg:px-14 lg:py-14">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-brightLime">Ready to explore</p>
-              <h2 className="mt-4 text-3xl font-semibold leading-tight sm:text-4xl">Make every farming decision count.</h2>
-              <p className="mt-4 max-w-xl leading-7 text-myanglow-sage">Explore the complete prototype and see how field signals become useful, farmer-friendly actions.</p>
+      <section id="impact" className="flex min-h-screen scroll-mt-0 items-center py-8 sm:py-10">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="impact-panel relative overflow-hidden rounded-[2rem] bg-myanglow-navy px-6 py-8 text-white shadow-[0_30px_80px_rgba(12,46,61,0.2)] sm:px-8 lg:px-10 lg:py-9">
+            <div className="impact-orb absolute -right-20 -top-24 h-72 w-72 rounded-full bg-myanglow-lime/15 blur-3xl" />
+            <div className="impact-orb impact-orb-delayed absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-myanglow-soft/10 blur-3xl" />
+
+            <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+              <div className="impact-reveal max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-myanglow-brightLime">Connected field impact</p>
+                <h2 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">Turn field signals into confident action.</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-myanglow-sage sm:text-base">MyanGrow combines monitoring, recommendations, disease support, and simulated sensor readings in one approachable platform.</p>
+              </div>
+
+              <div className="impact-reveal impact-reveal-delayed grid grid-cols-3 gap-3">
+                {[
+                  ['5', 'connected tools'],
+                  ['24/7', 'field visibility'],
+                  ['1', 'simple workspace'],
+                ].map(([value, label]) => (
+                  <div key={label} className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur-sm">
+                    <p className="text-xl font-semibold text-myanglow-brightLime sm:text-2xl">{value}</p>
+                    <p className="mt-1 text-xs leading-5 text-myanglow-sage">{label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <Link to="/dashboard" className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-myanglow-brightLime px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:-translate-y-0.5 lg:mt-0">
-              Launch dashboard
-            </Link>
+
+            <div className="relative mt-6 grid gap-3 md:grid-cols-3">
+              {impactHighlights.map(({ icon: Icon, title, description }, index) => (
+                <article key={title} className="impact-card rounded-[1.25rem] border border-white/10 bg-white/[0.07] p-4 backdrop-blur-sm" style={{ animationDelay: `${180 + index * 120}ms` }}>
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-myanglow-brightLime text-myanglow-navy">
+                    <Icon size={19} />
+                  </div>
+                  <h3 className="mt-3 text-base font-semibold">{title}</h3>
+                  <p className="mt-1.5 text-xs leading-5 text-myanglow-sage sm:text-sm">{description}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="impact-reveal impact-reveal-delayed relative mt-6 flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-xl text-sm leading-6 text-myanglow-sage">Start with your field overview, then explore the tools that matter most for today’s farming decisions.</p>
+              <button type="button" onClick={() => openAuth('signup')} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-myanglow-brightLime px-6 py-3.5 text-sm font-semibold text-myanglow-navy transition hover:-translate-y-1 hover:bg-white">
+                Launch dashboard
+              </button>
+            </div>
           </div>
         </div>
       </section>
+      {authMode ? (
+        <AuthModal
+          mode={authMode}
+          onModeChange={setAuthMode}
+          onClose={() => setAuthMode(null)}
+          onSuccess={() => navigate('/dashboard')}
+        />
+      ) : null}
     </main>
   )
 }
