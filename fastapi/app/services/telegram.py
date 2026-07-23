@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import httpx
+import truststore
 
 from app.core.config import get_settings
 
@@ -25,11 +26,13 @@ def send_telegram_message(message: str) -> TelegramResult:
 
     url = f"https://api.telegram.org/bot{settings.telegram_bot_token.get_secret_value()}/sendMessage"
     try:
-        response = httpx.post(
-            url,
-            json={"chat_id": settings.telegram_chat_id, "text": message},
-            timeout=5.0,
-        )
+        # Use the OS certificate store so corporate/network TLS certificates trusted
+        # by Windows are honored without weakening HTTPS verification.
+        with httpx.Client(verify=truststore.SSLContext(), timeout=5.0) as client:
+            response = client.post(
+                url,
+                json={"chat_id": settings.telegram_chat_id, "text": message},
+            )
         response.raise_for_status()
         return TelegramResult(status="sent")
     except (httpx.HTTPError, ValueError):
