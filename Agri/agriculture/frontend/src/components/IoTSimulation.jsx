@@ -12,6 +12,8 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
+import { API_BASE_URL, API_ENABLED } from '../api.js'
+import WokwiSensorControls from './WokwiSensorControls.jsx'
 import {
   Droplets,
   FlaskConical,
@@ -130,7 +132,19 @@ export default function IoTSimulation() {
   const [soilMoisture, setSoilMoisture] = useState(62.3)
   const [soilPH, setSoilPH] = useState(6.8)
   const [lightIntensity, setLightIntensity] = useState(55.7)
+  const [temperature, setTemperature] = useState(28)
+  const [humidity, setHumidity] = useState(65)
   const [isSimulating, setIsSimulating] = useState(true)
+  const [networkMode, setNetworkMode] = useState('lorawan')
+  const [isApplying, setIsApplying] = useState(false)
+  const [syncStatus, setSyncStatus] = useState('')
+  const [draft, setDraft] = useState({
+    soilMoisture: 62.3,
+    soilPH: 6.8,
+    lightIntensity: 55.7,
+    temperature: 28,
+    humidity: 65,
+  })
 
   const phHistory = useMemo(() =>
     phActualHistory.map(v => Math.round((v / 14) * 100)),
@@ -142,16 +156,30 @@ export default function IoTSimulation() {
     const label =
       `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
 
+    const newSoil = randomWalk(soilMoisture, 6, 5, 95)
     const newPH = randomWalk(soilPH, 0.4, 3.5, 9.0)
+    const newLight = randomWalk(lightIntensity, 7, 0, 100)
+    const newTemperature = randomWalk(temperature, 1.5, 8, 42)
+    const newHumidity = randomWalk(humidity, 4, 15, 98)
 
     setLabels(prev => [...prev.slice(1), label])
-    setSoilHistory(prev => [...prev.slice(1), randomWalk(prev[prev.length - 1], 12, 10, 95)])
+    setSoilHistory(prev => [...prev.slice(1), newSoil])
     setPhActualHistory(prev => [...prev.slice(1), newPH])
-    setLightHistory(prev => [...prev.slice(1), randomWalk(prev[prev.length - 1], 10, 5, 95)])
-    setSoilMoisture(prev => randomWalk(prev, 6, 5, 95))
+    setLightHistory(prev => [...prev.slice(1), newLight])
+    setSoilMoisture(newSoil)
     setSoilPH(newPH)
-    setLightIntensity(prev => randomWalk(prev, 7, 0, 100))
-  }, [soilPH])
+    setLightIntensity(newLight)
+    setTemperature(newTemperature)
+    setHumidity(newHumidity)
+    setDraft({
+      soilMoisture: newSoil,
+      soilPH: newPH,
+      lightIntensity: newLight,
+      temperature: newTemperature,
+      humidity: newHumidity,
+    })
+    setSyncStatus('')
+  }, [soilMoisture, soilPH, lightIntensity, temperature, humidity])
 
   useEffect(() => {
     if (!isSimulating) return
@@ -262,6 +290,69 @@ export default function IoTSimulation() {
   const phStatus = getPHStatus(soilPH, t)
   const ltStatus = getLightStatus(lightIntensity, t)
 
+  const updateDraft = (key, value) => {
+    setIsSimulating(false)
+    setSyncStatus('')
+    setDraft((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateNetworkMode = (mode) => {
+    setIsSimulating(false)
+    setSyncStatus('')
+    setNetworkMode(mode)
+  }
+
+  const applyDraftReading = async () => {
+    setIsSimulating(false)
+    setIsApplying(true)
+
+    const now = new Date()
+    const label =
+      `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+
+    setLabels((previous) => [...previous.slice(1), label])
+    setSoilHistory((previous) => [...previous.slice(1), draft.soilMoisture])
+    setPhActualHistory((previous) => [...previous.slice(1), draft.soilPH])
+    setLightHistory((previous) => [...previous.slice(1), draft.lightIntensity])
+    setSoilMoisture(draft.soilMoisture)
+    setSoilPH(draft.soilPH)
+    setLightIntensity(draft.lightIntensity)
+    setTemperature(draft.temperature)
+    setHumidity(draft.humidity)
+
+    if (!API_ENABLED) {
+      setSyncStatus('local')
+      setIsApplying(false)
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/observations/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          device_id: Number(import.meta.env.VITE_WOKWI_DEVICE_ID || 1),
+          event_id: `dashboard-${networkMode}-${Date.now()}`,
+          temperature: draft.temperature,
+          humidity: draft.humidity,
+          soil_moisture: draft.soilMoisture,
+          ph: draft.soilPH,
+          light: draft.lightIntensity,
+          recorded_at: now.toISOString(),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Observation upload failed with ${response.status}`)
+      }
+      setSyncStatus('backend')
+    } catch {
+      setSyncStatus('local')
+    } finally {
+      setIsApplying(false)
+    }
+  }
+
   return (
     <section className="iot-simulation">
       <div className="max-w-7xl mx-auto flex flex-col gap-4 lg:gap-5">
@@ -298,9 +389,15 @@ export default function IoTSimulation() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 lg:p-6 lg:pb-4 w-full h-[300px] lg:h-[360px]">
-          <Line data={chartData} options={chartOptions} />
-        </div>
+        <WokwiSensorControls
+          draft={draft}
+          networkMode={networkMode}
+          onChange={updateDraft}
+          onNetworkModeChange={updateNetworkMode}
+          onApply={applyDraftReading}
+          isApplying={isApplying}
+          syncStatus={syncStatus}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-100">
@@ -390,6 +487,16 @@ export default function IoTSimulation() {
                 style={{ width: `${lightIntensity}%`, background: ltStatus.bar }}
               />
             </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 lg:p-6 lg:pb-4 w-full">
+          <div className="mb-3">
+            <h2 className="m-0 text-base font-bold text-slate-800">{t('iot.chartTitle')}</h2>
+            <p className="mb-0 mt-0.5 text-xs text-slate-500">{t('iot.chartSubtitle')}</p>
+          </div>
+          <div className="h-[300px] lg:h-[360px]">
+            <Line data={chartData} options={chartOptions} />
           </div>
         </div>
 
