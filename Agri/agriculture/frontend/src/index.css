@@ -1,6 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-myanglow-sage: #cde4b5;
+  --color-myanglow-lime: #9ad64c;
+  --color-myanglow-forest: #1c6a3e;
+  --color-myanglow-soft: #90c689;
+  --color-myanglow-dark-green: #36704c;
+  --color-myanglow-navy: #0c2e3d;
+  --color-myanglow-gray-green: #a1bcb2;
+  --color-myanglow-medium: #359244;
+  --color-myanglow-bright-lime: #bde63d;
+  --color-myanglow-fresh: #54b03f;
+  --color-myanglow-pastel: #6ab36a;
+  --color-myanglow-muted: #4e8e52;
+}
 
 :root {
   color-scheme: light;
