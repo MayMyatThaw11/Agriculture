@@ -9,12 +9,33 @@ from app.core.config import get_settings
 settings = get_settings()
 
 
+def _require_supabase_tls(url: URL, query: dict[str, str]) -> None:
+    if (
+        url.host
+        and url.host.endswith(".supabase.com")
+        and "sslmode" not in query
+        and "ssl" not in query
+    ):
+        query["sslmode"] = "require"
+
+
+def make_sync_database_url(database_url: str) -> URL:
+    url = make_url(database_url)
+    if not url.drivername.startswith("postgresql"):
+        raise ValueError("AGROGUARD_DATABASE_URL must be a PostgreSQL connection URL")
+
+    query = dict(url.query)
+    _require_supabase_tls(url, query)
+    return url.set(drivername="postgresql+psycopg", query=query)
+
+
 def make_async_database_url(database_url: str) -> URL:
     url = make_url(database_url)
     if not url.drivername.startswith("postgresql"):
         raise ValueError("AGROGUARD_DATABASE_URL must be a PostgreSQL connection URL")
 
     query = dict(url.query)
+    _require_supabase_tls(url, query)
     sslmode = query.pop("sslmode", None)
     if sslmode and "ssl" not in query:
         query["ssl"] = sslmode

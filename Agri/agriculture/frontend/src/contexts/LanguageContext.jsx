@@ -81,6 +81,7 @@ const translations = {
     "iot.sync.local": "Reading applied locally. The live feed is paused.",
     "iot.sync.backend": "Reading saved to the backend and added to the graph.",
     "iot.sync.alert": "Telegram alert sent: plant stress detected (growing-condition estimate below 50%).",
+    "iot.sync.cooldown": "Plant stress continues. A Telegram alert was already sent recently, so the duplicate was suppressed for one hour.",
     "iot.sync.backendError": "Reading could not be saved. Check the FastAPI server and database connection.",
     "iot.sync.telegramError": "Reading was saved, but Telegram could not deliver the alert. Check the bot token and chat ID.",
     "iot.chartTitle": "Sensor history",

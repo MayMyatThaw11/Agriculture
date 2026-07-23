@@ -183,16 +183,19 @@ export default function IoTSimulation() {
       }
 
       const result = await response.json()
-      const unhealthy = result.health_score != null && result.health_score < 50
-      const delivered = ['sent', 'suppressed'].includes(result.alert_status)
+      const healthScore = result.healthScore ?? result.health_score
+      const alertStatus = result.alertStatus ?? result.alert_status
+      const unhealthy = healthScore != null && healthScore < 50
       setSyncStatus(
-        unhealthy && result.alert_status === 'failed'
+        unhealthy && alertStatus === 'failed'
           ? 'telegramError'
-          : unhealthy && !delivered
-            ? 'backendError'
-            : unhealthy
+          : unhealthy && alertStatus === 'suppressed'
+            ? 'cooldown'
+            : unhealthy && alertStatus === 'sent'
               ? 'alert'
-              : 'backend',
+              : unhealthy
+                ? 'backendError'
+                : 'backend',
       )
       return result
     } catch {
