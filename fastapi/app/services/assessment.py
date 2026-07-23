@@ -9,6 +9,7 @@ from app.db.models.crop_profile import CropProfile
 from app.db.models.crop_requirement import CropRequirement
 from app.db.models.field import Field
 from app.db.models.field_context_snapshot import FieldContextSnapshot
+from app.db.models.sensor_device import SensorDevice
 from app.db.models.sensor_observation import SensorObservation
 from app.db.session import utcnow
 from app.services.alerting import create_alert_for_assessment
@@ -152,7 +153,8 @@ async def recompute_assessment(
 
     obs_result = await session.execute(
         select(SensorObservation)
-        .where(SensorObservation.device_id == field.id)
+        .join(SensorDevice, SensorDevice.id == SensorObservation.device_id)
+        .where(SensorDevice.field_id == field.id)
         .order_by(SensorObservation.id.desc())
         .limit(1)
     )

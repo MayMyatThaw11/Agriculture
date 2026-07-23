@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.sensor_device import SensorDevice
@@ -20,8 +21,10 @@ async def register_device(
     request: RegisterDeviceRequest,
     session: Annotated[AsyncSession, Depends(get_db_session)],
 ):
-    existing = await session.get(SensorDevice, request.device_id)
-    if existing:
+    existing = await session.execute(
+        select(SensorDevice).where(SensorDevice.device_id == request.device_id)
+    )
+    if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A device with this device_id is already registered",

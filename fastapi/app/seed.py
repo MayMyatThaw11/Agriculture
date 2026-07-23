@@ -1,5 +1,6 @@
 from sqlalchemy import select
 
+import app.db  # noqa: F401
 from app.db.base import Base
 from app.db.models.crop_profile import CropProfile
 from app.db.models.crop_requirement import CropRequirement

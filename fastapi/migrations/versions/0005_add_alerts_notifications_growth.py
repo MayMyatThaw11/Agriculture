@@ -4,11 +4,9 @@ Revision ID: 0005
 Revises: 0004
 Create Date: 2026-07-23
 """
-from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import JSON
 
 revision: str = "0005"
 down_revision: str | None = "0004"
@@ -17,7 +15,15 @@ depends_on: str | None = None
 
 
 def upgrade() -> None:
-    op.add_column("assessments", sa.Column("confidence", sa.String(20), server_default="high", nullable=False))
+    op.add_column(
+        "assessments",
+        sa.Column(
+            "confidence",
+            sa.String(20),
+            server_default="high",
+            nullable=False,
+        ),
+    )
     op.add_column(
         "assessments",
         sa.Column(

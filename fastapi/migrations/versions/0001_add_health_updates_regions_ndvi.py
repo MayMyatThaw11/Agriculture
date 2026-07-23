@@ -5,7 +5,6 @@ Revises:
 Create Date: 2026-07-22
 """
 
-from collections.abc import Sequence
 
 import geoalchemy2  # noqa: F401
 import sqlalchemy as sa

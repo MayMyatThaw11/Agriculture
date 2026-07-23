@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { API_BASE_URL } from '../api';
+import { API_BASE_URL, DEMO_FIELD_ID } from '../api';
 
 export default function HealthUpdates() {
   const { t } = useLanguage();
@@ -19,7 +19,7 @@ export default function HealthUpdates() {
 
   useEffect(() => {
     let active = true;
-    fetch(`${API_BASE_URL}/fields/demo-field/alerts`)
+    fetch(`${API_BASE_URL}/fields/${DEMO_FIELD_ID}/alerts`)
       .then((response) => response.ok ? response.json() : [])
       .then((data) => {
         if (active) setAlerts(data);

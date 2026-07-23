@@ -1,9 +1,14 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.models.field import Field
 from app.db.models.sensor_device import SensorDevice
-from app.schemas.sensor_observation import IngestObservationRequest
+from app.db.models.sensor_observation import SensorObservation
+from app.schemas.sensor_observation import IngestObservationRequest, ObservationResponse
+from app.services.assessment import recompute_assessment
 
 _PLAUSIBLE_RANGES = {
     "temperature": (-10.0, 60.0),
@@ -67,6 +72,59 @@ def validate_reading(field: str, value: float | None) -> float | None:
 def validate_observation(payload: IngestObservationRequest) -> None:
     for field in ("temperature", "humidity", "soil_moisture", "ph", "light"):
         validate_reading(field, getattr(payload, field))
+
+
+async def ingest_observation(
+    session: AsyncSession,
+    payload: IngestObservationRequest,
+) -> ObservationResponse:
+    device = await session.get(SensorDevice, payload.device_id)
+    if not device:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+
+    existing = await session.execute(
+        select(SensorObservation).where(SensorObservation.event_id == payload.event_id)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Observation with event_id '{payload.event_id}' already exists",
+        )
+
+    validate_observation(payload)
+
+    observation = SensorObservation(
+        device_id=payload.device_id,
+        event_id=payload.event_id,
+        temperature=payload.temperature,
+        humidity=payload.humidity,
+        soil_moisture=payload.soil_moisture,
+        ph=payload.ph,
+        light=payload.light,
+        recorded_at=payload.recorded_at or datetime.now(UTC),
+    )
+    session.add(observation)
+    device.last_seen_at = datetime.now(UTC)
+    device.is_stale = False
+
+    await session.commit()
+    await session.refresh(observation)
+
+    field = await session.get(Field, device.field_id)
+    if field:
+        await recompute_assessment(session, field)
+
+    return ObservationResponse(
+        id=observation.id,
+        device_id=observation.device_id,
+        event_id=observation.event_id,
+        temperature=observation.temperature,
+        humidity=observation.humidity,
+        soil_moisture=observation.soil_moisture,
+        ph=observation.ph,
+        light=observation.light,
+        recorded_at=observation.recorded_at,
+    )
 
 
 def simulate_scenario(device: SensorDevice, scenario: str) -> IngestObservationRequest:

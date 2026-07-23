@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, status
 from fastapi.responses import StreamingResponse
 
@@ -13,14 +15,7 @@ async def chat(request: ChatRequest):
 
     async def event_stream():
         async for chunk in stream_chat(messages, request.language):
-            payload = _escape_json(chunk)
-            yield f"data: {{{{ \"content\": \"{payload}\", \"done\": false }}}}\n\n"
-        yield "data: {\"content\": \"\", \"done\": true}\n\n"
+            yield f"data: {json.dumps({'content': chunk, 'done': False})}\n\n"
+        yield f"data: {json.dumps({'content': '', 'done': True})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
-
-
-def _escape_json(s: str) -> str:
-    for old, new in (("\\", "\\\\"), ('"', '\\"'), ("\n", "\\n"), ("\r", "\\r"), ("\t", "\\t")):
-        s = s.replace(old, new)
-    return s

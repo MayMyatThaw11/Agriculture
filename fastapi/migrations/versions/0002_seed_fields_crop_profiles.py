@@ -4,7 +4,6 @@ Revision ID: 0002
 Revises: 0001
 Create Date: 2026-07-23
 """
-from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -121,7 +120,8 @@ def upgrade() -> None:
 
     op.execute(
         """
-        INSERT INTO crop_requirements (crop_profile_id, factor, min_value, max_value, unit, criticality)
+        INSERT INTO crop_requirements
+            (crop_profile_id, factor, min_value, max_value, unit, criticality)
         VALUES
         (1, 'temperature', 18, 35, '°C', 'critical'),
         (1, 'soil_moisture', 40, 80, '%', 'important'),

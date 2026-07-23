@@ -55,9 +55,8 @@ async def field_alerts(
     return result.scalars().all()
 
 
-@router.api_route(
+@router.patch(
     "/alerts/{alert_id}/acknowledge",
-    methods=["POST", "PATCH"],
     response_model=AlertResponse,
     status_code=status.HTTP_200_OK,
     summary="Acknowledge an alert",

@@ -10,8 +10,10 @@ from app.core.config import get_settings
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    from app.seed import init_database
-    await init_database()
+    if get_settings().initialize_database:
+        from app.seed import init_database
+
+        await init_database()
     yield
 
 

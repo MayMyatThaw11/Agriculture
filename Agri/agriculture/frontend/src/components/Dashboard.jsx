@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BarChart3, CloudRain, Leaf, MapPinned, Sprout, TrendingUp } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext.jsx'
-import { API_BASE_URL } from '../api.js'
+import { API_BASE_URL, DEMO_FIELD_ID } from '../api.js'
 
 const overviewCards = [
 	{
@@ -58,7 +58,7 @@ function Dashboard() {
 		let active = true
 		Promise.all([
 			fetch(`${API_BASE_URL}/dashboard/stats`).then((response) => response.ok ? response.json() : null),
-			fetch(`${API_BASE_URL}/fields/demo-field/growth/timeline`).then((response) => response.ok ? response.json() : []),
+			fetch(`${API_BASE_URL}/fields/${DEMO_FIELD_ID}/growth/timeline`).then((response) => response.ok ? response.json() : []),
 		]).then(([nextStats, nextGrowth]) => {
 			if (!active) return
 			setStats(nextStats)
@@ -83,7 +83,7 @@ function Dashboard() {
 
 	const startGrowth = async () => {
 		try {
-			const response = await fetch(`${API_BASE_URL}/fields/demo-field/growth/start`, {
+			const response = await fetch(`${API_BASE_URL}/fields/${DEMO_FIELD_ID}/growth/start`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ scenario: growthScenario }),

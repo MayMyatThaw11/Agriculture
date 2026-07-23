@@ -64,7 +64,7 @@ async def _reset_demo(
     await reset_demo_data(session, field, data.scenario)
 
     if data.scenario == "dry-soil":
-        ingest_observation(
+        await ingest_observation(
             session,
             IngestObservationRequest(
                 event_id=f"demo-reset-dry-{uuid4().hex}",
@@ -77,7 +77,7 @@ async def _reset_demo(
             ),
         )
     elif data.scenario == "heat-stress":
-        ingest_observation(
+        await ingest_observation(
             session,
             IngestObservationRequest(
                 event_id=f"demo-reset-heat-{uuid4().hex}",

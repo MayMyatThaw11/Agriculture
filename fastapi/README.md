@@ -24,7 +24,9 @@ Run these commands from this `fastapi` folder:
 4. Start the API: `python -m uvicorn app.main:app --reload`
 5. Open the API documentation: `http://127.0.0.1:8000/docs`
 
-Create and maintain `.env` only on the local machine. It is ignored by Git. Never commit database connection strings, Telegram tokens, or other credentials.
+Copy `.env.example` to `.env` and replace its placeholder database credentials. The
+real `.env` is ignored by Git. Never commit database connection strings, Telegram
+tokens, or other credentials.
 
 ## Available endpoints
 
@@ -44,6 +46,10 @@ Create and maintain `.env` only on the local machine. It is ignored by Git. Neve
 ## Database migrations
 
 Set `AGROGUARD_DATABASE_URL` in the private local `.env`. For Supabase on an IPv4-only network, copy the Session pooler URI from the project's Dashboard **Connect** panel and keep TLS enabled with `sslmode=require`. Use the direct database endpoint only when the machine has working IPv6 connectivity or the Supabase IPv4 add-on.
+
+Set `AGROGUARD_INITIALIZE_DATABASE=true` only when startup should create missing
+tables and seed the demo data. Without it, the API still starts and the health/docs
+routes work, while database-backed routes require a configured database.
 
 - Create a migration after adding models: `python -m alembic revision --autogenerate -m "describe change"`
 - Apply migrations: `python -m alembic upgrade head`
