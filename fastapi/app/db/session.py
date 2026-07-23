@@ -1,23 +1,29 @@
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
 
 settings = get_settings()
 
-engine = create_engine(
-    settings.database_url,
+_async_url = settings.database_url.replace("postgresql+psycopg://", "postgresql+asyncpg://")
+
+engine = create_async_engine(
+    _async_url,
     pool_pre_ping=True,
 )
-session_factory = sessionmaker(
+session_factory = async_sessionmaker(
     bind=engine,
-    class_=Session,
+    class_=AsyncSession,
     expire_on_commit=False,
 )
 
 
-def get_db_session() -> Iterator[Session]:
-    with session_factory() as session:
+async def get_db_session() -> AsyncIterator[AsyncSession]:
+    async with session_factory() as session:
         yield session
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)

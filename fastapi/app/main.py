@@ -10,7 +10,8 @@ from app.core.config import get_settings
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """Own application startup and shutdown resources as integrations are added."""
+    from app.seed import init_database
+    await init_database()
     yield
 
 
