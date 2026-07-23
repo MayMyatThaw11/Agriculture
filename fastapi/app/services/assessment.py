@@ -14,10 +14,12 @@ from app.db.models.sensor_observation import SensorObservation
 from app.db.session import utcnow
 from app.services.alerting import create_alert_for_assessment
 
+MIN_CONDITION_SCORE = 5.0
+
 _CRITICALITY_WEIGHTS = {
-    "critical": 3.0,
-    "important": 1.5,
-    "advisory": 0.5,
+    "critical": 100.0,
+    "important": 100.0,
+    "advisory": 25.0,
 }
 
 
@@ -26,6 +28,7 @@ def _compute_factor_impact(
     req_min: float,
     req_max: float,
     criticality: str,
+    factor: str | None = None,
 ) -> dict:
     if value is None:
         return {
@@ -37,12 +40,16 @@ def _compute_factor_impact(
     if req_min <= value <= req_max:
         return {"impact": 0.0, "status": "within_range", "gap": 0.0}
     elif value < req_min:
-        gap = (req_min - value) / max(abs(req_min), 0.001)
-        impact = min(gap * _CRITICALITY_WEIGHTS.get(criticality, 1.0), 20.0)
+        gap = (req_min - value) / max(req_max - req_min, 0.001)
+        impact = min(gap * _CRITICALITY_WEIGHTS.get(criticality, 50.0), 100.0)
+        if factor in {"soil_moisture", "ph"}:
+            impact = max(impact, 55.0)
         return {"impact": round(impact, 2), "status": "below_range", "gap": round(gap, 3)}
     else:
-        gap = (value - req_max) / max(abs(req_max), 0.001)
-        impact = min(gap * _CRITICALITY_WEIGHTS.get(criticality, 1.0), 20.0)
+        gap = (value - req_max) / max(req_max - req_min, 0.001)
+        impact = min(gap * _CRITICALITY_WEIGHTS.get(criticality, 50.0), 100.0)
+        if factor in {"soil_moisture", "ph"}:
+            impact = max(impact, 55.0)
         return {"impact": round(impact, 2), "status": "above_range", "gap": round(gap, 3)}
 
 
@@ -65,7 +72,13 @@ def run_assessment(
 
     for req in requirements:
         value = field_values.get(req.factor)
-        result = _compute_factor_impact(value, req.min_value, req.max_value, req.criticality)
+        result = _compute_factor_impact(
+            value,
+            req.min_value,
+            req.max_value,
+            req.criticality,
+            req.factor,
+        )
         factor_entry = {
             "factor": req.factor,
             "value": value,
@@ -79,21 +92,24 @@ def run_assessment(
         evidence_list.append(factor_entry)
         total_impact += result["impact"]
 
-    health_score = max(0.0, 100.0 - total_impact)
+    health_score = max(MIN_CONDITION_SCORE, 100.0 - total_impact)
 
     if health_score >= 70:
         status = "healthy"
-    elif health_score >= 40:
+    elif health_score >= 50:
         status = "warning"
     else:
         status = "critical"
 
-    risk_factors = [
-        f"{e['factor']}_{e['status']}"
+    risk_entries = [
+        e
         for e in evidence_list
         if e["status"] in ("below_range", "above_range") and e["criticality"] != "advisory"
     ]
-    primary_risk = risk_factors[0] if risk_factors else None
+    worst_risk = max(risk_entries, key=lambda entry: entry["impact"]) if risk_entries else None
+    primary_risk = (
+        f"{worst_risk['factor']}_{worst_risk['status']}" if worst_risk else None
+    )
 
     recommendation = _generate_recommendation(primary_risk, health_score, status)
 

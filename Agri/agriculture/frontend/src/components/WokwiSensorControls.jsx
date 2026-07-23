@@ -11,49 +11,68 @@ import {
 import { useLanguage } from '../contexts/LanguageContext.jsx'
 
 const WOKWI_PROJECT_URL = 'https://wokwi.com/projects/470253321537782785'
+const MIN_CONDITION_SCORE = 5
+
+function rangePenalty(value, minimum, maximum, weight, minimumPenalty = 0) {
+  if (value >= minimum && value <= maximum) return 0
+  const distance = value < minimum ? minimum - value : value - maximum
+  return Math.min(
+    100,
+    Math.max(
+      minimumPenalty,
+      (distance / Math.max(maximum - minimum, 0.001)) * weight,
+    ),
+  )
+}
 
 function analyzeReading(reading) {
-  let status = 'healthy'
-  let recommendation = 'healthy'
-  let healthScore = 100
-  let pumpActive = false
+  const risks = [
+    {
+      status: reading.soilMoisture < 40 ? 'needsWater' : 'excessWater',
+      recommendation: reading.soilMoisture < 40 ? 'needsWater' : 'excessWater',
+      penalty: rangePenalty(reading.soilMoisture, 40, 80, 100, 55),
+    },
+    {
+      status: reading.soilPH < 5.5 || reading.soilPH > 7.5 ? 'poorPh' : 'healthy',
+      recommendation: reading.soilPH < 5.5 || reading.soilPH > 7.5 ? 'poorPh' : 'healthy',
+      penalty: rangePenalty(reading.soilPH, 5.5, 7.5, 100, 55),
+    },
+    {
+      status: reading.temperature < 18
+        ? 'coldStress'
+        : reading.temperature > 35 ? 'heatStress' : 'healthy',
+      recommendation: reading.temperature < 18
+        ? 'coldStress'
+        : reading.temperature > 35 ? 'heatStress' : 'healthy',
+      penalty: rangePenalty(reading.temperature, 18, 35, 100),
+    },
+    {
+      status: reading.lightIntensity < 60 ? 'lowLight' : 'healthy',
+      recommendation: reading.lightIntensity < 60 ? 'lowLight' : 'healthy',
+      penalty: rangePenalty(reading.lightIntensity, 60, 100, 100),
+    },
+    {
+      status: 'healthy',
+      recommendation: 'healthy',
+      penalty: rangePenalty(reading.humidity, 40, 85, 25),
+    },
+  ]
 
-  if (reading.soilMoisture < 35) {
-    status = 'needsWater'
-    recommendation = 'needsWater'
-    healthScore -= 35
-    pumpActive = true
-  } else if (reading.soilMoisture > 90) {
-    status = 'excessWater'
-    recommendation = 'excessWater'
-    healthScore -= 20
-  } else if (reading.temperature > 35) {
-    status = 'heatStress'
-    recommendation = 'heatStress'
-    healthScore -= 25
-  } else if (reading.temperature < 12) {
-    status = 'coldStress'
-    recommendation = 'coldStress'
-    healthScore -= 20
-  } else if (reading.soilPH < 5.5 || reading.soilPH > 7.5) {
-    status = 'poorPh'
-    recommendation = 'poorPh'
-    healthScore -= 20
-  } else if (reading.lightIntensity < 20) {
-    status = 'lowLight'
-    recommendation = 'lowLight'
-    healthScore -= 15
-  }
-
-  if (reading.humidity < 30 || reading.humidity > 90) {
-    healthScore -= 10
-  }
+  const healthScore = Math.max(
+    MIN_CONDITION_SCORE,
+    Math.min(100, 100 - risks.reduce((total, risk) => total + risk.penalty, 0)),
+  )
+  const worstRisk = risks.reduce(
+    (worst, risk) => risk.penalty > worst.penalty ? risk : worst,
+    risks[0],
+  )
+  const hasRisk = worstRisk.penalty > 0
 
   return {
-    status,
-    recommendation,
-    healthScore: Math.max(0, Math.min(100, healthScore)),
-    pumpActive,
+    status: hasRisk ? worstRisk.status : 'healthy',
+    recommendation: hasRisk ? worstRisk.recommendation : 'healthy',
+    healthScore: Math.round(healthScore * 10) / 10,
+    pumpActive: reading.soilMoisture < 40,
   }
 }
 
@@ -111,7 +130,9 @@ export default function WokwiSensorControls({
 }) {
   const { t } = useLanguage()
   const result = analyzeReading(draft)
-  const statusTone = result.status === 'healthy'
+  const statusTone = result.healthScore < 50
+    ? 'border-red-200 bg-red-50 text-red-700'
+    : result.status === 'healthy'
     ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
     : result.pumpActive
       ? 'border-blue-200 bg-blue-50 text-blue-700'
@@ -260,7 +281,7 @@ export default function WokwiSensorControls({
           <div className={`rounded-xl border p-3 ${statusTone}`}>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold">{t('iot.cropHealth')}</span>
-              <span className="text-lg font-extrabold">{result.healthScore}/100</span>
+              <span className="text-lg font-extrabold">{result.healthScore}%</span>
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/70">
               <div

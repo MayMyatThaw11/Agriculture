@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     telegram_bot_token: SecretStr | None = None
     telegram_chat_id: str | None = None
+    telegram_polling_enabled: bool = True
 
     llm_api_key: SecretStr | None = None
     llm_endpoint: str = "https://api.openai.com/v1"

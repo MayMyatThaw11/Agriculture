@@ -29,3 +29,6 @@ class ObservationResponse(APIModel):
     ph: float | None
     light: float | None
     recorded_at: datetime
+    health_score: float | None = None
+    assessment_status: str | None = None
+    alert_status: str | None = None

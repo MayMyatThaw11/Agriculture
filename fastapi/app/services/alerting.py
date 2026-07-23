@@ -34,17 +34,24 @@ async def create_alert_for_assessment(
 
     fingerprint = f"{field.id}:{assessment.primary_risk}:{assessment.status}"
     if recent:
-        suppressed = Notification(
-            alert_id=recent.id,
-            channel="telegram",
-            destination_ref="cooldown",
-            delivery_key=f"{recent.fingerprint}:cooldown:{now.isoformat()}",
-            status="suppressed",
-            attempt_count=0,
-            last_error_code="cooldown_active",
+        delivery_result = await session.execute(
+            select(Notification.status)
+            .where(Notification.alert_id == recent.id)
+            .order_by(Notification.id.desc())
+            .limit(1)
         )
-        session.add(suppressed)
-        return recent, suppressed
+        if delivery_result.scalar_one_or_none() == "sent":
+            suppressed = Notification(
+                alert_id=recent.id,
+                channel="telegram",
+                destination_ref="cooldown",
+                delivery_key=f"{recent.fingerprint}:cooldown:{now.isoformat()}",
+                status="suppressed",
+                attempt_count=0,
+                last_error_code="cooldown_active",
+            )
+            session.add(suppressed)
+            return recent, suppressed
 
     alert = Alert(
         field_id=field.id,
@@ -75,6 +82,8 @@ async def create_alert_for_assessment(
             field_name=field.name,
             risk_type=assessment.primary_risk or "unknown",
             recommendation=assessment.recommendation or "No recommendation",
+            health_score=assessment.health_score,
+            evidence=assessment.evidence,
         )
     )
     delivery.status = result_tg.status

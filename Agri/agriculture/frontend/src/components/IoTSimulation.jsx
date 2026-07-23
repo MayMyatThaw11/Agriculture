@@ -151,6 +151,56 @@ export default function IoTSimulation() {
     [phActualHistory]
   )
 
+  const postObservation = useCallback(async ({
+    soilMoisture: nextSoilMoisture,
+    soilPH: nextSoilPH,
+    lightIntensity: nextLightIntensity,
+    temperature: nextTemperature,
+    humidity: nextHumidity,
+    recordedAt = new Date(),
+  }) => {
+    if (!API_ENABLED) return null
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/observations/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          device_id: Number(import.meta.env.VITE_WOKWI_DEVICE_ID || 1),
+          event_id: `dashboard-${networkMode}-${recordedAt.getTime()}`,
+          temperature: nextTemperature,
+          humidity: nextHumidity,
+          soil_moisture: nextSoilMoisture,
+          ph: nextSoilPH,
+          light: nextLightIntensity,
+          recorded_at: recordedAt.toISOString(),
+        }),
+      })
+
+      if (!response.ok) {
+        setSyncStatus('backendError')
+        throw new Error(`Observation upload failed with ${response.status}`)
+      }
+
+      const result = await response.json()
+      const unhealthy = result.health_score != null && result.health_score < 50
+      const delivered = ['sent', 'suppressed'].includes(result.alert_status)
+      setSyncStatus(
+        unhealthy && result.alert_status === 'failed'
+          ? 'telegramError'
+          : unhealthy && !delivered
+            ? 'backendError'
+            : unhealthy
+              ? 'alert'
+              : 'backend',
+      )
+      return result
+    } catch {
+      setSyncStatus('backendError')
+      return null
+    }
+  }, [networkMode])
+
   const addDataPoint = useCallback(() => {
     const now = new Date()
     const label =
@@ -178,8 +228,15 @@ export default function IoTSimulation() {
       temperature: newTemperature,
       humidity: newHumidity,
     })
-    setSyncStatus('')
-  }, [soilMoisture, soilPH, lightIntensity, temperature, humidity])
+    void postObservation({
+      soilMoisture: newSoil,
+      soilPH: newPH,
+      lightIntensity: newLight,
+      temperature: newTemperature,
+      humidity: newHumidity,
+      recordedAt: now,
+    })
+  }, [soilMoisture, soilPH, lightIntensity, temperature, humidity, postObservation])
 
   useEffect(() => {
     if (!isSimulating) return
@@ -326,31 +383,15 @@ export default function IoTSimulation() {
       return
     }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/observations/ingest`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          device_id: Number(import.meta.env.VITE_WOKWI_DEVICE_ID || 1),
-          event_id: `dashboard-${networkMode}-${Date.now()}`,
-          temperature: draft.temperature,
-          humidity: draft.humidity,
-          soil_moisture: draft.soilMoisture,
-          ph: draft.soilPH,
-          light: draft.lightIntensity,
-          recorded_at: now.toISOString(),
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Observation upload failed with ${response.status}`)
-      }
-      setSyncStatus('backend')
-    } catch {
-      setSyncStatus('local')
-    } finally {
-      setIsApplying(false)
-    }
+    await postObservation({
+      soilMoisture: draft.soilMoisture,
+      soilPH: draft.soilPH,
+      lightIntensity: draft.lightIntensity,
+      temperature: draft.temperature,
+      humidity: draft.humidity,
+      recordedAt: now,
+    })
+    setIsApplying(false)
   }
 
   return (

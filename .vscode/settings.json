@@ -1,8 +1,10 @@
 {
-  "python.defaultInterpreterPath": "${workspaceFolder}/backcode/.venv/Scripts/python.exe",
-  "python.analysis.extraPaths": ["${workspaceFolder}/backcode"],
+  "python.defaultInterpreterPath": "${workspaceFolder}/fastapi/.venv/Scripts/python.exe",
+  "python.analysis.extraPaths": ["${workspaceFolder}/fastapi"],
+  "python.envFile": "${workspaceFolder}/fastapi/.env",
+  "python.terminal.activateEnvironment": true,
   "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["backcode/tests"],
+  "python.testing.pytestArgs": ["fastapi/tests"],
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnSave": true,
@@ -11,5 +13,5 @@
       "source.organizeImports.ruff": "explicit"
     }
   },
-  "ruff.configuration": "${workspaceFolder}/backcode/pyproject.toml"
+  "ruff.configuration": "${workspaceFolder}/fastapi/pyproject.toml"
 }

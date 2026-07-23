@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -10,11 +11,24 @@ from app.core.config import get_settings
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    if get_settings().initialize_database:
+    settings = get_settings()
+    if settings.initialize_database:
         from app.seed import init_database
 
         await init_database()
-    yield
+
+    telegram_task = None
+    if settings.telegram_polling_enabled and settings.telegram_bot_token:
+        from app.services.telegram_bot import run_telegram_polling
+
+        telegram_task = asyncio.create_task(run_telegram_polling())
+
+    try:
+        yield
+    finally:
+        if telegram_task:
+            telegram_task.cancel()
+            await asyncio.gather(telegram_task, return_exceptions=True)
 
 
 def create_app() -> FastAPI:

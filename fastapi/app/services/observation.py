@@ -111,8 +111,10 @@ async def ingest_observation(
     await session.refresh(observation)
 
     field = await session.get(Field, device.field_id)
+    assessment = None
+    delivery = None
     if field:
-        await recompute_assessment(session, field)
+        assessment, _, delivery = await recompute_assessment(session, field)
 
     return ObservationResponse(
         id=observation.id,
@@ -124,6 +126,9 @@ async def ingest_observation(
         ph=observation.ph,
         light=observation.light,
         recorded_at=observation.recorded_at,
+        health_score=assessment.health_score if assessment else None,
+        assessment_status=assessment.status if assessment else None,
+        alert_status=delivery.status if delivery else None,
     )
 
 

@@ -51,6 +51,15 @@ Set `AGROGUARD_INITIALIZE_DATABASE=true` only when startup should create missing
 tables and seed the demo data. Without it, the API still starts and the health/docs
 routes work, while database-backed routes require a configured database.
 
+### Telegram bot
+
+Create the bot with BotFather and put the complete token in
+`AGROGUARD_TELEGRAM_BOT_TOKEN`. Set `AGROGUARD_TELEGRAM_CHAT_ID` to the allowed
+chat ID and keep `AGROGUARD_TELEGRAM_POLLING_ENABLED=true` for `/start` and
+`/help` responses. Only one running API worker should poll a bot token at a time.
+If Telegram returns HTTP 404 from `getMe`, the token is invalid or incomplete and
+must be regenerated in BotFather.
+
 - Create a migration after adding models: `python -m alembic revision --autogenerate -m "describe change"`
 - Apply migrations: `python -m alembic upgrade head`
 - View current migration state: `python -m alembic current`
